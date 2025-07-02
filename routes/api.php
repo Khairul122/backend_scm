@@ -1,20 +1,16 @@
 <?php
 
-spl_autoload_register(function ($class) {
-    $paths = [
-        __DIR__ . '/../controllers/' . $class . '.php',
-        __DIR__ . '/../models/' . $class . '.php'
-    ];
-    
-    foreach ($paths as $file) {
-        if (file_exists($file)) {
-            require_once $file;
-            return;
-        }
-    }
-});
-
 require_once 'AuthApi.php';
+require_once 'DashboardApi.php';
+require_once 'KategoriApi.php';
+require_once 'OngkirApi.php';
+require_once 'AlamatPengirimanApi.php';
+require_once 'UserApi.php';
+require_once 'ReturApi.php';
+require_once 'KurirApi.php';
+require_once 'OngkirCacheApi.php';
+require_once 'PesananApi.php';
+require_once 'UlasanApi.php';
 
 $router->get('/api/health', function() {
     response(200, [
@@ -31,6 +27,7 @@ $router->get('/api', function() {
         'version' => '1.0.0',
         'endpoints' => [
             'auth' => '/api/auth/*',
+            'dashboard' => '/api/dashboard/*',
             'health' => '/api/health'
         ]
     ]);

@@ -9,6 +9,9 @@ class Router {
     public function post($path, $callback) {
         $this->addRoute('POST', $path, $callback);
     }
+    public function patch($path, $callback) {
+        $this->addRoute('PATCH', $path, $callback);
+    }
     
     public function put($path, $callback) {
         $this->addRoute('PUT', $path, $callback);
@@ -37,14 +40,36 @@ class Router {
                 }
             }
         } else {
-            response(404, [
-                'error' => 'Route not found', 
-                'method' => $method, 
-                'path' => $path,
-                'available_routes' => array_keys($this->routes[$method] ?? []),
-                'all_routes' => $this->routes
-            ]);
+            $this->handleDynamicRoutes($method, $path);
         }
+    }
+    
+    private function handleDynamicRoutes($method, $path) {
+        foreach ($this->routes[$method] ?? [] as $pattern => $callback) {
+            if ($this->matchRoute($pattern, $path)) {
+                if (is_callable($callback)) {
+                    try {
+                        call_user_func($callback);
+                    } catch (Exception $e) {
+                        response(500, ['error' => 'Internal server error: ' . $e->getMessage()]);
+                    }
+                    return;
+                }
+            }
+        }
+        
+        response(404, [
+            'error' => 'Route not found', 
+            'method' => $method, 
+            'path' => $path,
+            'available_routes' => array_keys($this->routes[$method] ?? [])
+        ]);
+    }
+    
+    private function matchRoute($pattern, $path) {
+        $pattern = preg_replace('/\{[^}]+\}/', '([^/]+)', $pattern);
+        $pattern = '#^' . $pattern . '$#';
+        return preg_match($pattern, $path);
     }
     
     private function getCurrentPath() {

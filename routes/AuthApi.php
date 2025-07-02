@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../controllers/AuthController.php';
+require_once __DIR__ . '/../models/AuthModel.php';
+
 $router->post('/api/auth/register', function() {
     $controller = new AuthController();
     $controller->register();
