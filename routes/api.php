@@ -23,6 +23,8 @@ require_once 'PenjualProdukApi.php';
 require_once 'PenjualGudangApi.php';
 require_once 'PenjualPesananApi.php';
 require_once 'PenjualChatApi.php';
+require_once 'PembeliApi.php';
+require_once 'PembeliAlamatApi.php';
 
 $router->get('/api/health', function() {
     response(200, [
