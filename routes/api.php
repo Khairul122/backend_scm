@@ -20,6 +20,9 @@ require_once 'RoastProduksiApi.php';
 require_once 'RoastGudangApi.php';
 require_once 'RoastChatApi.php';
 require_once 'PenjualProdukApi.php';
+require_once 'PenjualGudangApi.php';
+require_once 'PenjualPesananApi.php';
+require_once 'PenjualChatApi.php';
 
 $router->get('/api/health', function() {
     response(200, [

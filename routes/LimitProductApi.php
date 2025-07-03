@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../controllers/LimitProdukController.php';
-require_once __DIR__ . '/../models/LimitProdukModel.php';
+require_once __DIR__ . '/../controllers/LimitProductController.php';
+require_once __DIR__ . '/../models/LimitProductModel.php';
 
 $router->get('/api/limit-produk', function() {
     $controller = new LimitProdukController();
