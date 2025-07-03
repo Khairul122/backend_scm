@@ -11,6 +11,15 @@ require_once 'KurirApi.php';
 require_once 'OngkirCacheApi.php';
 require_once 'PesananApi.php';
 require_once 'UlasanApi.php';
+require_once 'PetaniApi.php';
+require_once 'BatchProduksiApi.php';
+require_once 'GudangApi.php';
+require_once 'LimitProductApi.php';
+require_once 'RoastProductApi.php';
+require_once 'RoastProduksiApi.php';
+require_once 'RoastGudangApi.php';
+require_once 'RoastChatApi.php';
+require_once 'PenjualProdukApi.php';
 
 $router->get('/api/health', function() {
     response(200, [
