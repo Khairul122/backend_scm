@@ -31,8 +31,6 @@ class AuthController {
             response(409, ['error' => 'Phone number already exists']);
         }
 
-        $input['password'] = password_hash($input['password'], PASSWORD_DEFAULT);
-
         $userId = $this->authModel->createUser($input);
         
         if ($userId) {
@@ -53,7 +51,7 @@ class AuthController {
 
         $user = $this->authModel->getUserByIdentifier($input['identifier']);
 
-        if (!$user || !password_verify($input['password'], $user['password'])) {
+        if (!$user || $user['password'] !== $input['password']) {
             response(401, ['error' => 'Invalid credentials']);
         }
 
@@ -139,12 +137,11 @@ class AuthController {
 
         $userData = $this->authModel->getUserById($user['user_id']);
 
-        if (!password_verify($input['current_password'], $userData['password'])) {
+        if ($userData['password'] !== $input['current_password']) {
             response(400, ['error' => 'Current password incorrect']);
         }
 
-        $newPasswordHash = password_hash($input['new_password'], PASSWORD_DEFAULT);
-        $updated = $this->authModel->updatePassword($user['user_id'], $newPasswordHash);
+        $updated = $this->authModel->updatePassword($user['user_id'], $input['new_password']);
 
         if ($updated) {
             response(200, ['message' => 'Password changed successfully']);
