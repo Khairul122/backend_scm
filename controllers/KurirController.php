@@ -1,37 +1,57 @@
 <?php
-class KurirController {
+class KurirController
+{
     private $kurirModel;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->kurirModel = new KurirModel();
     }
 
-    public function getAllKurir() {
+    public function getAllKurir()
+    {
         $status = $_GET['status'] ?? null;
-        
+        $id = $_GET['id'] ?? null;
+
+        if ($id) {
+            return $this->getKurirById($id);
+        }
+
         if ($status === 'active') {
             $kurir = $this->kurirModel->getActiveKurir();
         } else {
             $kurir = $this->kurirModel->getAllKurir();
         }
-        
+
         response(200, ['data' => $kurir]);
     }
 
-    public function getKurirById($id) {
+    public function getKurirById($id = null)
+    {
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = $input['id'] ?? $_GET['id'] ?? null;
+        }
+
+        if (!$id) {
+            response(400, ['error' => 'ID required']);
+            return;
+        }
+
         $kurir = $this->kurirModel->getKurirById($id);
-        
+
         if (!$kurir) {
             response(404, ['error' => 'Courier not found']);
             return;
         }
-        
+
         response(200, ['data' => $kurir]);
     }
 
-    public function createKurir() {
+    public function createKurir()
+    {
         $input = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!$this->validateKurirInput($input)) {
             response(400, ['error' => 'Invalid input data']);
             return;
@@ -48,7 +68,7 @@ class KurirController {
         }
 
         $kurirId = $this->kurirModel->createKurir($input);
-        
+
         if ($kurirId) {
             $kurir = $this->kurirModel->getKurirById($kurirId);
             response(201, ['message' => 'Courier added successfully', 'data' => $kurir]);
@@ -57,9 +77,19 @@ class KurirController {
         }
     }
 
-    public function updateKurir($id) {
+    public function updateKurir($id = null)
+    {
         $input = json_decode(file_get_contents('php://input'), true);
         
+        if (!$id) {
+            $id = $input['id'] ?? $_GET['id'] ?? null;
+        }
+
+        if (!$id) {
+            response(400, ['error' => 'ID required']);
+            return;
+        }
+
         if (!$this->kurirModel->getKurirById($id)) {
             response(404, ['error' => 'Courier not found']);
             return;
@@ -85,7 +115,19 @@ class KurirController {
         }
     }
 
-    public function deleteKurir($id) {
+    public function deleteKurir($id = null)
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$id) {
+            $id = $input['id'] ?? $_GET['id'] ?? null;
+        }
+
+        if (!$id) {
+            response(400, ['error' => 'ID required']);
+            return;
+        }
+
         if (!$this->kurirModel->getKurirById($id)) {
             response(404, ['error' => 'Courier not found']);
             return;
@@ -98,9 +140,19 @@ class KurirController {
         }
     }
 
-    public function updateKurirStatus($id) {
+    public function updateKurirStatus($id = null)
+    {
         $input = json_decode(file_get_contents('php://input'), true);
         
+        if (!$id) {
+            $id = $input['id'] ?? $_GET['id'] ?? null;
+        }
+
+        if (!$id) {
+            response(400, ['error' => 'ID required']);
+            return;
+        }
+
         if (!isset($input['status']) || !in_array($input['status'], ['aktif', 'nonaktif'])) {
             response(400, ['error' => 'Invalid status']);
             return;
@@ -112,15 +164,20 @@ class KurirController {
         }
 
         if ($this->kurirModel->updateKurirStatus($id, $input['status'])) {
-            response(200, ['message' => 'Courier status updated successfully']);
+            $kurir = $this->kurirModel->getKurirById($id);
+            response(200, [
+                'message' => 'Courier status updated successfully',
+                'data' => $kurir
+            ]);
         } else {
             response(500, ['error' => 'Failed to update courier status']);
         }
     }
 
-    public function searchKurir() {
+    public function searchKurir()
+    {
         $query = $_GET['q'] ?? '';
-        
+
         if (empty($query)) {
             response(400, ['error' => 'Search query required']);
             return;
@@ -130,74 +187,82 @@ class KurirController {
         response(200, ['data' => $kurir]);
     }
 
-    public function getKurirStats() {
+    public function getKurirStats()
+    {
         $stats = $this->kurirModel->getKurirStats();
         response(200, ['data' => $stats]);
     }
 
-    public function getKurirPerformance() {
+    public function getKurirPerformance()
+    {
         $performance = $this->kurirModel->getKurirPerformance();
-        
+
         response(200, [
             'message' => 'Courier performance monitoring',
             'data' => $performance
         ]);
     }
 
-    public function getKurirDeliveryTime() {
+    public function getKurirDeliveryTime()
+    {
         $deliveryTime = $this->kurirModel->getKurirDeliveryTime();
-        
+
         response(200, [
             'message' => 'Courier delivery time analysis',
             'data' => $deliveryTime
         ]);
     }
 
-    public function getKurirCostAnalysis() {
+    public function getKurirCostAnalysis()
+    {
         $costAnalysis = $this->kurirModel->getKurirCostAnalysis();
-        
+
         response(200, [
             'message' => 'Courier cost analysis',
             'data' => $costAnalysis
         ]);
     }
 
-    public function importKurirFromApi() {
+    public function importKurirFromApi()
+    {
         $imported = $this->kurirModel->importKurirFromApi();
-        
+
         response(200, [
             'message' => 'Couriers imported from Raja Ongkir API',
             'imported_count' => $imported
         ]);
     }
 
-    public function getPoorPerformingKurir() {
+    public function getPoorPerformingKurir()
+    {
         $threshold = $_GET['threshold'] ?? 70;
         $kurir = $this->kurirModel->getPoorPerformingKurir($threshold);
-        
+
         response(200, [
             'message' => "Couriers with success rate below {$threshold}%",
             'data' => $kurir
         ]);
     }
 
-    public function getKurirTrends() {
+    public function getKurirTrends()
+    {
         $days = $_GET['days'] ?? 30;
         $trends = $this->kurirModel->getKurirTrends($days);
-        
+
         response(200, [
             'message' => "Courier usage trends for last {$days} days",
             'data' => $trends
         ]);
     }
 
-    public function getKurirAnalytics() {
+    public function getKurirAnalytics()
+    {
         $stats = $this->kurirModel->getKurirStats();
         $performance = $this->kurirModel->getKurirPerformance();
         $deliveryTime = $this->kurirModel->getKurirDeliveryTime();
         $costAnalysis = $this->kurirModel->getKurirCostAnalysis();
         $usageStats = $this->kurirModel->getKurirUsageStats();
-        
+
         response(200, [
             'message' => 'Comprehensive courier analytics',
             'data' => [
@@ -210,31 +275,34 @@ class KurirController {
         ]);
     }
 
-    public function getKurirUsageStats() {
+    public function getKurirUsageStats()
+    {
         $usageStats = $this->kurirModel->getKurirUsageStats();
-        
+
         response(200, [
             'message' => 'Courier usage statistics',
             'data' => $usageStats
         ]);
     }
 
-    public function getAvailableKurirCodes() {
+    public function getAvailableKurirCodes()
+    {
         $supportedCouriers = [
             ['kode' => 'jne', 'nama' => 'JNE'],
             ['kode' => 'pos', 'nama' => 'POS Indonesia'],
             ['kode' => 'tiki', 'nama' => 'TIKI']
         ];
-        
+
         response(200, [
             'message' => 'Available courier codes supported by Raja Ongkir API',
             'data' => $supportedCouriers
         ]);
     }
 
-    public function bulkUpdateStatus() {
+    public function bulkUpdateStatus()
+    {
         $input = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!isset($input['ids']) || !isset($input['status']) || !is_array($input['ids'])) {
             response(400, ['error' => 'Invalid input data']);
             return;
@@ -259,19 +327,20 @@ class KurirController {
         ]);
     }
 
-    public function cleanupPoorPerformers() {
+    public function cleanupPoorPerformers()
+    {
         $input = json_decode(file_get_contents('php://input'), true);
         $threshold = $input['threshold'] ?? 50;
-        
+
         $poorPerformers = $this->kurirModel->getPoorPerformingKurir($threshold);
         $cleaned = 0;
-        
+
         foreach ($poorPerformers as $kurir) {
             if ($this->kurirModel->updateKurirStatus($kurir['id'], 'nonaktif')) {
                 $cleaned++;
             }
         }
-        
+
         response(200, [
             'message' => 'Poor performing couriers deactivated',
             'deactivated_count' => $cleaned,
@@ -279,9 +348,10 @@ class KurirController {
         ]);
     }
 
-    private function validateKurirInput($input) {
+    private function validateKurirInput($input)
+    {
         $required = ['kode', 'nama'];
-        
+
         foreach ($required as $field) {
             if (!isset($input[$field]) || empty($input[$field])) {
                 return false;

@@ -3,11 +3,6 @@
 require_once __DIR__ . '/../controllers/KurirController.php';
 require_once __DIR__ . '/../models/KurirModel.php';
 
-$router->get('/api/kurir', function() {
-    $controller = new KurirController();
-    $controller->getAllKurir();
-});
-
 $router->get('/api/kurir/search', function() {
     $controller = new KurirController();
     $controller->searchKurir();
@@ -58,14 +53,29 @@ $router->get('/api/kurir/available-codes', function() {
     $controller->getAvailableKurirCodes();
 });
 
-$router->get('/api/kurir/{id}', function($id) {
+$router->get('/api/kurir', function() {
     $controller = new KurirController();
-    $controller->getKurirById($id);
+    $controller->getAllKurir();
 });
 
 $router->post('/api/kurir', function() {
     $controller = new KurirController();
     $controller->createKurir();
+});
+
+$router->put('/api/kurir', function() {
+    $controller = new KurirController();
+    $controller->updateKurir();
+});
+
+$router->patch('/api/kurir', function() {
+    $controller = new KurirController();
+    $controller->updateKurirStatus();
+});
+
+$router->delete('/api/kurir', function() {
+    $controller = new KurirController();
+    $controller->deleteKurir();
 });
 
 $router->post('/api/kurir/import', function() {
@@ -81,19 +91,4 @@ $router->post('/api/kurir/bulk-update', function() {
 $router->post('/api/kurir/cleanup', function() {
     $controller = new KurirController();
     $controller->cleanupPoorPerformers();
-});
-
-$router->put('/api/kurir/{id}', function($id) {
-    $controller = new KurirController();
-    $controller->updateKurir($id);
-});
-
-$router->patch('/api/kurir/{id}/status', function($id) {
-    $controller = new KurirController();
-    $controller->updateKurirStatus($id);
-});
-
-$router->delete('/api/kurir/{id}', function($id) {
-    $controller = new KurirController();
-    $controller->deleteKurir($id);
 });
