@@ -36,8 +36,8 @@ class KurirModel {
 
     public function createKurir($data) {
         $stmt = $this->db->prepare("
-            INSERT INTO kurir (kode, nama, status) 
-            VALUES (?, ?, ?)
+            INSERT INTO kurir (kode, nama, status, created_at, updated_at) 
+            VALUES (?, ?, ?, NOW(), NOW())
         ");
         
         $status = $data['status'] ?? 'aktif';
@@ -82,6 +82,7 @@ class KurirModel {
             return false;
         }
 
+        $fields[] = "updated_at = NOW()";
         $types .= "i";
         $values[] = $id;
 
@@ -99,7 +100,7 @@ class KurirModel {
     }
 
     public function updateKurirStatus($id, $status) {
-        $stmt = $this->db->prepare("UPDATE kurir SET status = ? WHERE id = ?");
+        $stmt = $this->db->prepare("UPDATE kurir SET status = ?, updated_at = NOW() WHERE id = ?");
         $stmt->bind_param("si", $status, $id);
         return $stmt->execute();
     }
@@ -111,12 +112,18 @@ class KurirModel {
                 k.kode,
                 k.nama,
                 k.status,
-                COUNT(p.id) as total_orders,
-                SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END) as delivered_orders,
-                SUM(CASE WHEN p.status_pesanan = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
-                ROUND((SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END) / COUNT(p.id)) * 100, 2) as success_rate,
-                AVG(p.ongkir) as avg_shipping_cost,
-                COUNT(CASE WHEN p.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) as recent_orders
+                COALESCE(COUNT(p.id), 0) as total_orders,
+                COALESCE(SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END), 0) as delivered_orders,
+                COALESCE(SUM(CASE WHEN p.status_pesanan = 'cancelled' THEN 1 ELSE 0 END), 0) as cancelled_orders,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(p.id) > 0 THEN 
+                            (SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END) / COUNT(p.id)) * 100 
+                        ELSE 0 
+                    END, 2
+                ) as success_rate,
+                COALESCE(AVG(p.ongkir), 0) as avg_shipping_cost,
+                COALESCE(COUNT(CASE WHEN p.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END), 0) as recent_orders
             FROM kurir k
             LEFT JOIN pesanan p ON k.kode = p.kurir_kode
             GROUP BY k.id, k.kode, k.nama, k.status
@@ -139,20 +146,28 @@ class KurirModel {
     }
 
     public function getKurirDeliveryTime() {
+        $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
+        $checkTable->execute();
+        $tableExists = $checkTable->get_result()->num_rows > 0;
+        
+        if (!$tableExists) {
+            return [];
+        }
+
         $stmt = $this->db->prepare("
             SELECT 
                 k.kode,
                 k.nama,
-                COUNT(p.id) as total_delivered,
-                AVG(DATEDIFF(
-                    STR_TO_DATE(CONCAT(p.created_at, ' + ', SUBSTRING_INDEX(p.estimasi_sampai, ' ', 1), ' days'), '%Y-%m-%d %H:%i:%s + %d days'),
-                    p.created_at
-                )) as avg_delivery_days,
-                p.estimasi_sampai as common_estimate
+                COALESCE(COUNT(p.id), 0) as total_delivered,
+                COALESCE(AVG(CASE 
+                    WHEN p.estimasi_sampai IS NOT NULL AND p.estimasi_sampai != ''
+                    THEN CAST(SUBSTRING_INDEX(p.estimasi_sampai, ' ', 1) AS UNSIGNED)
+                    ELSE 3
+                END), 3) as avg_delivery_days,
+                COALESCE(p.estimasi_sampai, '3 hari') as common_estimate
             FROM kurir k
-            LEFT JOIN pesanan p ON k.kode = p.kurir_kode
-            WHERE p.status_pesanan = 'delivered'
-            GROUP BY k.kode, k.nama, p.estimasi_sampai
+            LEFT JOIN pesanan p ON k.kode = p.kurir_kode AND p.status_pesanan = 'delivered'
+            GROUP BY k.kode, k.nama
             ORDER BY avg_delivery_days ASC
         ");
         $stmt->execute();
@@ -160,18 +175,25 @@ class KurirModel {
     }
 
     public function getKurirCostAnalysis() {
+        $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
+        $checkTable->execute();
+        $tableExists = $checkTable->get_result()->num_rows > 0;
+        
+        if (!$tableExists) {
+            return [];
+        }
+
         $stmt = $this->db->prepare("
             SELECT 
                 k.kode,
                 k.nama,
-                COUNT(p.id) as total_shipments,
-                MIN(p.ongkir) as min_cost,
-                MAX(p.ongkir) as max_cost,
-                AVG(p.ongkir) as avg_cost,
-                SUM(p.ongkir) as total_revenue
+                COALESCE(COUNT(p.id), 0) as total_shipments,
+                COALESCE(MIN(p.ongkir), 0) as min_cost,
+                COALESCE(MAX(p.ongkir), 0) as max_cost,
+                COALESCE(AVG(p.ongkir), 0) as avg_cost,
+                COALESCE(SUM(p.ongkir), 0) as total_revenue
             FROM kurir k
-            LEFT JOIN pesanan p ON k.kode = p.kurir_kode
-            WHERE p.ongkir > 0
+            LEFT JOIN pesanan p ON k.kode = p.kurir_kode AND p.ongkir > 0
             GROUP BY k.kode, k.nama
             ORDER BY avg_cost ASC
         ");
@@ -180,7 +202,7 @@ class KurirModel {
     }
 
     public function getKurirFromApi() {
-        $supportedCouriers = ['jne', 'pos', 'tiki'];
+        $supportedCouriers = ['jne', 'pos', 'tiki', 'rpx', 'esl', 'pcp', 'jet', 'dse', 'first', 'ncs', 'star'];
         
         $couriers = [];
         foreach ($supportedCouriers as $code) {
@@ -200,11 +222,12 @@ class KurirModel {
         
         foreach ($apiCouriers as $courier) {
             $stmt = $this->db->prepare("
-                INSERT INTO kurir (kode, nama, status) 
-                VALUES (?, ?, ?) 
+                INSERT INTO kurir (kode, nama, status, created_at, updated_at) 
+                VALUES (?, ?, ?, NOW(), NOW()) 
                 ON DUPLICATE KEY UPDATE 
                     nama = VALUES(nama),
-                    status = VALUES(status)
+                    status = VALUES(status),
+                    updated_at = NOW()
             ");
             
             $stmt->bind_param(
@@ -235,16 +258,30 @@ class KurirModel {
     }
 
     public function getPoorPerformingKurir($threshold = 70) {
+        $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
+        $checkTable->execute();
+        $tableExists = $checkTable->get_result()->num_rows > 0;
+        
+        if (!$tableExists) {
+            return [];
+        }
+
         $stmt = $this->db->prepare("
             SELECT 
                 k.id,
                 k.kode,
                 k.nama,
                 k.status,
-                COUNT(p.id) as total_orders,
-                SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END) as delivered_orders,
-                SUM(CASE WHEN p.status_pesanan = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
-                ROUND((SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END) / COUNT(p.id)) * 100, 2) as success_rate
+                COALESCE(COUNT(p.id), 0) as total_orders,
+                COALESCE(SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END), 0) as delivered_orders,
+                COALESCE(SUM(CASE WHEN p.status_pesanan = 'cancelled' THEN 1 ELSE 0 END), 0) as cancelled_orders,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(p.id) > 0 THEN 
+                            (SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END) / COUNT(p.id)) * 100 
+                        ELSE 0 
+                    END, 2
+                ) as success_rate
             FROM kurir k
             LEFT JOIN pesanan p ON k.kode = p.kurir_kode
             GROUP BY k.id, k.kode, k.nama, k.status
@@ -257,16 +294,23 @@ class KurirModel {
     }
 
     public function getKurirTrends($days = 30) {
+        $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
+        $checkTable->execute();
+        $tableExists = $checkTable->get_result()->num_rows > 0;
+        
+        if (!$tableExists) {
+            return [];
+        }
+
         $stmt = $this->db->prepare("
             SELECT 
                 DATE(p.created_at) as date,
                 k.kode,
                 k.nama,
-                COUNT(p.id) as daily_orders,
-                SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END) as daily_delivered
+                COALESCE(COUNT(p.id), 0) as daily_orders,
+                COALESCE(SUM(CASE WHEN p.status_pesanan = 'delivered' THEN 1 ELSE 0 END), 0) as daily_delivered
             FROM kurir k
-            LEFT JOIN pesanan p ON k.kode = p.kurir_kode
-            WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            LEFT JOIN pesanan p ON k.kode = p.kurir_kode AND p.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
             GROUP BY DATE(p.created_at), k.kode, k.nama
             ORDER BY date DESC, daily_orders DESC
         ");
@@ -276,7 +320,7 @@ class KurirModel {
     }
 
     public function validateKurirCode($kode) {
-        $supportedCouriers = ['jne', 'pos', 'tiki'];
+        $supportedCouriers = ['jne', 'pos', 'tiki', 'rpx', 'esl', 'pcp', 'jet', 'dse', 'first', 'ncs', 'star'];
         return in_array(strtolower($kode), $supportedCouriers);
     }
 
@@ -293,13 +337,39 @@ class KurirModel {
     }
 
     public function getKurirUsageStats() {
+        $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
+        $checkTable->execute();
+        $tableExists = $checkTable->get_result()->num_rows > 0;
+        
+        if (!$tableExists) {
+            $stmt = $this->db->prepare("
+                SELECT 
+                    k.kode,
+                    k.nama,
+                    k.status,
+                    0 as usage_count,
+                    0 as usage_percentage,
+                    NULL as last_used
+                FROM kurir k
+                ORDER BY k.nama ASC
+            ");
+            $stmt->execute();
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        }
+
         $stmt = $this->db->prepare("
             SELECT 
                 k.kode,
                 k.nama,
                 k.status,
-                COUNT(p.id) as usage_count,
-                ROUND((COUNT(p.id) / (SELECT COUNT(*) FROM pesanan)) * 100, 2) as usage_percentage,
+                COALESCE(COUNT(p.id), 0) as usage_count,
+                ROUND(
+                    CASE 
+                        WHEN (SELECT COUNT(*) FROM pesanan) > 0 THEN 
+                            (COUNT(p.id) / (SELECT COUNT(*) FROM pesanan)) * 100 
+                        ELSE 0 
+                    END, 2
+                ) as usage_percentage,
                 MAX(p.created_at) as last_used
             FROM kurir k
             LEFT JOIN pesanan p ON k.kode = p.kurir_kode

@@ -23,7 +23,8 @@ class KurirController
             $kurir = $this->kurirModel->getAllKurir();
         }
 
-        response(200, ['data' => $kurir]);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 200, 'data' => $kurir]);
     }
 
     public function getKurirById($id = null)
@@ -34,18 +35,23 @@ class KurirController
         }
 
         if (!$id) {
-            response(400, ['error' => 'ID required']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'ID required']);
             return;
         }
 
         $kurir = $this->kurirModel->getKurirById($id);
 
         if (!$kurir) {
-            response(404, ['error' => 'Courier not found']);
+            header('Content-Type: application/json');
+            http_response_code(404);
+            echo json_encode(['status' => 404, 'error' => 'Courier not found']);
             return;
         }
 
-        response(200, ['data' => $kurir]);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 200, 'data' => $kurir]);
     }
 
     public function createKurir()
@@ -53,17 +59,23 @@ class KurirController
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (!$this->validateKurirInput($input)) {
-            response(400, ['error' => 'Invalid input data']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'Invalid input data']);
             return;
         }
 
         if (!$this->kurirModel->validateKurirCode($input['kode'])) {
-            response(400, ['error' => 'Courier code not supported by Raja Ongkir API']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'Courier code not supported by Raja Ongkir API']);
             return;
         }
 
         if ($this->kurirModel->checkKurirExists($input['kode'])) {
-            response(400, ['error' => 'Courier code already exists']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'Courier code already exists']);
             return;
         }
 
@@ -71,9 +83,13 @@ class KurirController
 
         if ($kurirId) {
             $kurir = $this->kurirModel->getKurirById($kurirId);
-            response(201, ['message' => 'Courier added successfully', 'data' => $kurir]);
+            header('Content-Type: application/json');
+            http_response_code(201);
+            echo json_encode(['status' => 201, 'message' => 'Courier added successfully', 'data' => $kurir]);
         } else {
-            response(500, ['error' => 'Failed to add courier']);
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['status' => 500, 'error' => 'Failed to add courier']);
         }
     }
 
@@ -86,32 +102,43 @@ class KurirController
         }
 
         if (!$id) {
-            response(400, ['error' => 'ID required']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'ID required']);
             return;
         }
 
         if (!$this->kurirModel->getKurirById($id)) {
-            response(404, ['error' => 'Courier not found']);
+            header('Content-Type: application/json');
+            http_response_code(404);
+            echo json_encode(['status' => 404, 'error' => 'Courier not found']);
             return;
         }
 
         if (isset($input['kode'])) {
             if (!$this->kurirModel->validateKurirCode($input['kode'])) {
-                response(400, ['error' => 'Courier code not supported by Raja Ongkir API']);
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['status' => 400, 'error' => 'Courier code not supported by Raja Ongkir API']);
                 return;
             }
 
             if ($this->kurirModel->checkKurirExists($input['kode'], $id)) {
-                response(400, ['error' => 'Courier code already exists']);
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['status' => 400, 'error' => 'Courier code already exists']);
                 return;
             }
         }
 
         if ($this->kurirModel->updateKurir($id, $input)) {
             $kurir = $this->kurirModel->getKurirById($id);
-            response(200, ['message' => 'Courier updated successfully', 'data' => $kurir]);
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 200, 'message' => 'Courier updated successfully', 'data' => $kurir]);
         } else {
-            response(500, ['error' => 'Failed to update courier']);
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['status' => 500, 'error' => 'Failed to update courier']);
         }
     }
 
@@ -124,19 +151,26 @@ class KurirController
         }
 
         if (!$id) {
-            response(400, ['error' => 'ID required']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'ID required']);
             return;
         }
 
         if (!$this->kurirModel->getKurirById($id)) {
-            response(404, ['error' => 'Courier not found']);
+            header('Content-Type: application/json');
+            http_response_code(404);
+            echo json_encode(['status' => 404, 'error' => 'Courier not found']);
             return;
         }
 
         if ($this->kurirModel->deleteKurir($id)) {
-            response(200, ['message' => 'Courier deleted successfully']);
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 200, 'message' => 'Courier deleted successfully']);
         } else {
-            response(500, ['error' => 'Failed to delete courier']);
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['status' => 500, 'error' => 'Failed to delete courier']);
         }
     }
 
@@ -149,28 +183,38 @@ class KurirController
         }
 
         if (!$id) {
-            response(400, ['error' => 'ID required']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'ID required']);
             return;
         }
 
         if (!isset($input['status']) || !in_array($input['status'], ['aktif', 'nonaktif'])) {
-            response(400, ['error' => 'Invalid status']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'Invalid status']);
             return;
         }
 
         if (!$this->kurirModel->getKurirById($id)) {
-            response(404, ['error' => 'Courier not found']);
+            header('Content-Type: application/json');
+            http_response_code(404);
+            echo json_encode(['status' => 404, 'error' => 'Courier not found']);
             return;
         }
 
         if ($this->kurirModel->updateKurirStatus($id, $input['status'])) {
             $kurir = $this->kurirModel->getKurirById($id);
-            response(200, [
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 200,
                 'message' => 'Courier status updated successfully',
                 'data' => $kurir
             ]);
         } else {
-            response(500, ['error' => 'Failed to update courier status']);
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['status' => 500, 'error' => 'Failed to update courier status']);
         }
     }
 
@@ -179,25 +223,31 @@ class KurirController
         $query = $_GET['q'] ?? '';
 
         if (empty($query)) {
-            response(400, ['error' => 'Search query required']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'Search query required']);
             return;
         }
 
         $kurir = $this->kurirModel->searchKurir($query);
-        response(200, ['data' => $kurir]);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 200, 'data' => $kurir]);
     }
 
     public function getKurirStats()
     {
         $stats = $this->kurirModel->getKurirStats();
-        response(200, ['data' => $stats]);
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 200, 'data' => $stats]);
     }
 
     public function getKurirPerformance()
     {
         $performance = $this->kurirModel->getKurirPerformance();
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Courier performance monitoring',
             'data' => $performance
         ]);
@@ -207,7 +257,9 @@ class KurirController
     {
         $deliveryTime = $this->kurirModel->getKurirDeliveryTime();
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Courier delivery time analysis',
             'data' => $deliveryTime
         ]);
@@ -217,7 +269,9 @@ class KurirController
     {
         $costAnalysis = $this->kurirModel->getKurirCostAnalysis();
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Courier cost analysis',
             'data' => $costAnalysis
         ]);
@@ -227,7 +281,9 @@ class KurirController
     {
         $imported = $this->kurirModel->importKurirFromApi();
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Couriers imported from Raja Ongkir API',
             'imported_count' => $imported
         ]);
@@ -238,7 +294,9 @@ class KurirController
         $threshold = $_GET['threshold'] ?? 70;
         $kurir = $this->kurirModel->getPoorPerformingKurir($threshold);
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => "Couriers with success rate below {$threshold}%",
             'data' => $kurir
         ]);
@@ -249,7 +307,9 @@ class KurirController
         $days = $_GET['days'] ?? 30;
         $trends = $this->kurirModel->getKurirTrends($days);
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => "Courier usage trends for last {$days} days",
             'data' => $trends
         ]);
@@ -263,7 +323,9 @@ class KurirController
         $costAnalysis = $this->kurirModel->getKurirCostAnalysis();
         $usageStats = $this->kurirModel->getKurirUsageStats();
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Comprehensive courier analytics',
             'data' => [
                 'overview' => $stats,
@@ -279,7 +341,9 @@ class KurirController
     {
         $usageStats = $this->kurirModel->getKurirUsageStats();
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Courier usage statistics',
             'data' => $usageStats
         ]);
@@ -290,10 +354,20 @@ class KurirController
         $supportedCouriers = [
             ['kode' => 'jne', 'nama' => 'JNE'],
             ['kode' => 'pos', 'nama' => 'POS Indonesia'],
-            ['kode' => 'tiki', 'nama' => 'TIKI']
+            ['kode' => 'tiki', 'nama' => 'TIKI'],
+            ['kode' => 'rpx', 'nama' => 'RPX'],
+            ['kode' => 'esl', 'nama' => 'ESL Express'],
+            ['kode' => 'pcp', 'nama' => 'PCP Express'],
+            ['kode' => 'jet', 'nama' => 'JET Express'],
+            ['kode' => 'dse', 'nama' => 'DSE'],
+            ['kode' => 'first', 'nama' => 'First Logistics'],
+            ['kode' => 'ncs', 'nama' => 'NCS'],
+            ['kode' => 'star', 'nama' => 'Star Cargo']
         ];
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Available courier codes supported by Raja Ongkir API',
             'data' => $supportedCouriers
         ]);
@@ -304,12 +378,16 @@ class KurirController
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (!isset($input['ids']) || !isset($input['status']) || !is_array($input['ids'])) {
-            response(400, ['error' => 'Invalid input data']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'Invalid input data']);
             return;
         }
 
         if (!in_array($input['status'], ['aktif', 'nonaktif'])) {
-            response(400, ['error' => 'Invalid status']);
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['status' => 400, 'error' => 'Invalid status']);
             return;
         }
 
@@ -320,7 +398,9 @@ class KurirController
             }
         }
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Bulk status update completed',
             'updated_count' => $updated,
             'total_requested' => count($input['ids'])
@@ -341,7 +421,9 @@ class KurirController
             }
         }
 
-        response(200, [
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 200,
             'message' => 'Poor performing couriers deactivated',
             'deactivated_count' => $cleaned,
             'threshold_used' => $threshold

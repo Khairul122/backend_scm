@@ -6,6 +6,62 @@ class AuthController {
         $this->authModel = new AuthModel();
     }
 
+    public function login() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            response(405, ['error' => 'Method not allowed']);
+            return;
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (!$input) {
+            response(400, [
+                'error' => 'Invalid JSON input',
+                'debug' => [
+                    'raw_input' => file_get_contents('php://input'),
+                    'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set'
+                ]
+            ]);
+            return;
+        }
+
+        if (empty($input['identifier']) || empty($input['password'])) {
+            response(400, ['error' => 'Email/phone and password are required']);
+            return;
+        }
+
+        $user = $this->authModel->getUserByIdentifier($input['identifier']);
+
+        if (!$user) {
+            response(401, ['error' => 'User not found']);
+            return;
+        }
+
+        if ($user['password'] !== $input['password']) {
+            response(401, ['error' => 'Invalid password']);
+            return;
+        }
+
+        if ($user['status'] !== 'aktif') {
+            response(403, ['error' => 'Account is inactive']);
+            return;
+        }
+
+        $token = base64_encode(json_encode([
+            'user_id' => $user['id'],
+            'role' => $user['role'],
+            'exp' => time() + (24 * 60 * 60)
+        ]));
+
+        unset($user['password']);
+        
+        response(200, [
+            'message' => 'Login successful',
+            'token' => $token,
+            'user' => $user
+        ]);
+    }
+
     public function register() {
         $input = json_decode(file_get_contents('php://input'), true);
         
@@ -40,38 +96,6 @@ class AuthController {
         } else {
             response(500, ['error' => 'Failed to create user']);
         }
-    }
-
-    public function login() {
-        $input = json_decode(file_get_contents('php://input'), true);
-
-        if (empty($input['identifier']) || empty($input['password'])) {
-            response(400, ['error' => 'Email/phone and password are required']);
-        }
-
-        $user = $this->authModel->getUserByIdentifier($input['identifier']);
-
-        if (!$user || $user['password'] !== $input['password']) {
-            response(401, ['error' => 'Invalid credentials']);
-        }
-
-        if ($user['status'] !== 'aktif') {
-            response(403, ['error' => 'Account is inactive']);
-        }
-
-        $token = base64_encode(json_encode([
-            'user_id' => $user['id'],
-            'role' => $user['role'],
-            'exp' => time() + (24 * 60 * 60)
-        ]));
-
-        unset($user['password']);
-        
-        response(200, [
-            'message' => 'Login successful',
-            'token' => $token,
-            'user' => $user
-        ]);
     }
 
     public function profile() {
