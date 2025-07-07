@@ -89,26 +89,4 @@ class AuthModel {
         $stmt->bind_param("si", $hashedPassword, $id);
         return $stmt->execute();
     }
-
-    public function getAllUsers() {
-        $stmt = $this->db->prepare("
-            SELECT id, nama_lengkap, email, no_telepon, alamat, role, nama_toko, status, created_at 
-            FROM users 
-            ORDER BY created_at DESC
-        ");
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $users = [];
-        while ($row = $result->fetch_assoc()) {
-            $users[] = $row;
-        }
-        return $users;
-    }
-
-    public function updateUserStatus($id, $status) {
-        $stmt = $this->db->prepare("UPDATE users SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $status, $id);
-        return $stmt->execute();
-    }
 }

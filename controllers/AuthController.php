@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 class AuthController {
     private $authModel;
 
@@ -34,9 +36,7 @@ class AuthController {
         $userId = $this->authModel->createUser($input);
         
         if ($userId) {
-            $user = $this->authModel->getUserById($userId);
-            unset($user['password']);
-            response(201, ['message' => 'User registered successfully', 'user' => $user]);
+            response(201, ['message' => 'User registered successfully']);
         } else {
             response(500, ['error' => 'Failed to create user']);
         }
@@ -59,38 +59,35 @@ class AuthController {
             response(403, ['error' => 'Account is inactive']);
         }
 
-        $token = base64_encode(json_encode([
-            'user_id' => $user['id'],
+        $_SESSION['user'] = [
+            'id' => $user['id'],
+            'nama_lengkap' => $user['nama_lengkap'],
+            'email' => $user['email'],
+            'no_telepon' => $user['no_telepon'],
+            'alamat' => $user['alamat'],
             'role' => $user['role'],
-            'exp' => time() + (24 * 60 * 60)
-        ]));
-
-        unset($user['password']);
+            'nama_toko' => $user['nama_toko']
+        ];
         
-        response(200, [
-            'message' => 'Login successful',
-            'token' => $token,
-            'user' => $user
-        ]);
+        response(200, ['message' => 'Login successful', 'user' => $_SESSION['user']]);
+    }
+
+    public function logout() {
+        session_unset();
+        session_destroy();
+        response(200, ['message' => 'Logged out successfully']);
     }
 
     public function profile() {
-        $user = $this->getCurrentUser();
-        
-        if (!$user) {
+        if (!isset($_SESSION['user'])) {
             response(401, ['error' => 'Unauthorized']);
         }
 
-        $userData = $this->authModel->getUserById($user['user_id']);
-        unset($userData['password']);
-
-        response(200, ['user' => $userData]);
+        response(200, ['user' => $_SESSION['user']]);
     }
 
     public function updateProfile() {
-        $user = $this->getCurrentUser();
-        
-        if (!$user) {
+        if (!isset($_SESSION['user'])) {
             response(401, ['error' => 'Unauthorized']);
         }
 
@@ -111,21 +108,20 @@ class AuthController {
             response(400, ['error' => 'No data to update']);
         }
 
-        $updated = $this->authModel->updateUser($user['user_id'], $updateData);
+        $updated = $this->authModel->updateUser($_SESSION['user']['id'], $updateData);
 
         if ($updated) {
-            $userData = $this->authModel->getUserById($user['user_id']);
-            unset($userData['password']);
-            response(200, ['message' => 'Profile updated', 'user' => $userData]);
+            foreach ($updateData as $key => $value) {
+                $_SESSION['user'][$key] = $value;
+            }
+            response(200, ['message' => 'Profile updated', 'user' => $_SESSION['user']]);
         } else {
             response(500, ['error' => 'Update failed']);
         }
     }
 
     public function changePassword() {
-        $user = $this->getCurrentUser();
-        
-        if (!$user) {
+        if (!isset($_SESSION['user'])) {
             response(401, ['error' => 'Unauthorized']);
         }
 
@@ -135,50 +131,18 @@ class AuthController {
             response(400, ['error' => 'Current and new password required']);
         }
 
-        $userData = $this->authModel->getUserById($user['user_id']);
+        $userData = $this->authModel->getUserById($_SESSION['user']['id']);
 
         if ($userData['password'] !== $input['current_password']) {
             response(400, ['error' => 'Current password incorrect']);
         }
 
-        $updated = $this->authModel->updatePassword($user['user_id'], $input['new_password']);
+        $updated = $this->authModel->updatePassword($_SESSION['user']['id'], $input['new_password']);
 
         if ($updated) {
             response(200, ['message' => 'Password changed successfully']);
         } else {
             response(500, ['error' => 'Failed to change password']);
         }
-    }
-
-    public function verifyToken() {
-        $user = $this->getCurrentUser();
-        
-        if (!$user) {
-            response(401, ['error' => 'Invalid token']);
-        }
-
-        response(200, [
-            'valid' => true,
-            'user_id' => $user['user_id'],
-            'role' => $user['role']
-        ]);
-    }
-
-    private function getCurrentUser() {
-        $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
-
-        if (!preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            return null;
-        }
-
-        $token = $matches[1];
-        $decoded = json_decode(base64_decode($token), true);
-
-        if (!$decoded || $decoded['exp'] < time()) {
-            return null;
-        }
-
-        return $decoded;
     }
 }

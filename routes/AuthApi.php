@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../models/AuthModel.php';
 
@@ -28,13 +27,9 @@ $router->post('/api/auth/change-password', function() {
     $controller->changePassword();
 });
 
-$router->get('/api/auth/verify-token', function() {
-    $controller = new AuthController();
-    $controller->verifyToken();
-});
-
 $router->post('/api/auth/logout', function() {
-    response(200, ['message' => 'Logout successful']);
+    $controller = new AuthController();
+    $controller->logout();
 });
 
 $router->post('/api/auth/forgot-password', function() {
