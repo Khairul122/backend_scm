@@ -1,61 +1,69 @@
 <?php
-class KurirModel {
+class KurirModel
+{
     private $db;
     private $apiKey = 'c991b8daf3069a09ca3d0f52b7fcd3c8';
     private $baseUrl = 'https://api.rajaongkir.com/starter/';
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->db = Database::connect();
     }
 
-    public function getAllKurir() {
+    public function getAllKurir()
+    {
         $stmt = $this->db->prepare("SELECT * FROM kurir ORDER BY nama ASC");
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getKurirById($id) {
+    public function getKurirById($id)
+    {
         $stmt = $this->db->prepare("SELECT * FROM kurir WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function getKurirByKode($kode) {
+    public function getKurirByKode($kode)
+    {
         $stmt = $this->db->prepare("SELECT * FROM kurir WHERE kode = ?");
         $stmt->bind_param("s", $kode);
         $stmt->execute();
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function getActiveKurir() {
+    public function getActiveKurir()
+    {
         $stmt = $this->db->prepare("SELECT * FROM kurir WHERE status = 'aktif' ORDER BY nama ASC");
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function createKurir($data) {
+    public function createKurir($data)
+    {
         $stmt = $this->db->prepare("
             INSERT INTO kurir (kode, nama, status) 
             VALUES (?, ?, ?)
         ");
-        
+
         $status = $data['status'] ?? 'aktif';
-        
+
         $stmt->bind_param(
             "sss",
             $data['kode'],
             $data['nama'],
             $status
         );
-        
+
         if ($stmt->execute()) {
             return $this->db->insert_id;
         }
         return false;
     }
 
-    public function updateKurir($id, $data) {
+    public function updateKurir($id, $data)
+    {
         $fields = [];
         $types = "";
         $values = [];
@@ -88,23 +96,26 @@ class KurirModel {
         $sql = "UPDATE kurir SET " . implode(", ", $fields) . " WHERE id = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param($types, ...$values);
-        
+
         return $stmt->execute();
     }
 
-    public function deleteKurir($id) {
+    public function deleteKurir($id)
+    {
         $stmt = $this->db->prepare("DELETE FROM kurir WHERE id = ?");
         $stmt->bind_param("i", $id);
         return $stmt->execute();
     }
 
-    public function updateKurirStatus($id, $status) {
+    public function updateKurirStatus($id, $status)
+    {
         $stmt = $this->db->prepare("UPDATE kurir SET status = ? WHERE id = ?");
         $stmt->bind_param("si", $status, $id);
         return $stmt->execute();
     }
 
-    public function getKurirPerformance() {
+    public function getKurirPerformance()
+    {
         $stmt = $this->db->prepare("
             SELECT 
                 k.id,
@@ -132,7 +143,8 @@ class KurirModel {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getKurirStats() {
+    public function getKurirStats()
+    {
         $stmt = $this->db->prepare("
             SELECT 
                 COUNT(*) as total_kurir,
@@ -144,40 +156,69 @@ class KurirModel {
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function getKurirDeliveryTime() {
+    public function getKurirDeliveryTime()
+    {
         $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
-        $checkTable->execute();
+        if (!$checkTable || !$checkTable->execute()) {
+            return [];
+        }
+
         $tableExists = $checkTable->get_result()->num_rows > 0;
-        
+
         if (!$tableExists) {
             return [];
         }
 
+        $checkColumns = $this->db->prepare("
+        SHOW COLUMNS FROM pesanan LIKE 'estimasi_sampai'
+    ");
+
+        if (!$checkColumns || !$checkColumns->execute()) {
+            return [];
+        }
+
+        $columnExists = $checkColumns->get_result()->num_rows > 0;
+
+        if (!$columnExists) {
+            return [];
+        }
+
         $stmt = $this->db->prepare("
-            SELECT 
-                k.kode,
-                k.nama,
-                COALESCE(COUNT(p.id), 0) as total_delivered,
-                COALESCE(AVG(CASE 
-                    WHEN p.estimasi_sampai IS NOT NULL AND p.estimasi_sampai != ''
-                    THEN CAST(SUBSTRING_INDEX(p.estimasi_sampai, ' ', 1) AS UNSIGNED)
-                    ELSE 3
-                END), 3) as avg_delivery_days,
-                COALESCE(p.estimasi_sampai, '3 hari') as common_estimate
-            FROM kurir k
-            LEFT JOIN pesanan p ON k.kode = p.kurir_kode AND p.status_pesanan = 'delivered'
-            GROUP BY k.kode, k.nama
-            ORDER BY avg_delivery_days ASC
-        ");
-        $stmt->execute();
+        SELECT 
+            k.kode,
+            k.nama,
+            COALESCE(COUNT(p.id), 0) as total_delivered,
+            COALESCE(AVG(CASE 
+                WHEN p.estimasi_sampai IS NOT NULL AND p.estimasi_sampai != ''
+                THEN CAST(SUBSTRING_INDEX(p.estimasi_sampai, ' ', 1) AS UNSIGNED)
+                ELSE 3
+            END), 3) as avg_delivery_days,
+            COALESCE(p.estimasi_sampai, '3 hari') as common_estimate
+        FROM kurir k
+        LEFT JOIN pesanan p ON k.kode = p.kurir_kode AND p.status_pesanan = 'delivered'
+        GROUP BY k.kode, k.nama
+        ORDER BY avg_delivery_days ASC
+    ");
+
+        if (!$stmt) {
+            error_log("Database error: " . $this->db->error);
+            return [];
+        }
+
+        if (!$stmt->execute()) {
+            error_log("Execution error: " . $stmt->error);
+            return [];
+        }
+
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getKurirCostAnalysis() {
+    public function getKurirCostAnalysis()
+    {
         $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
         $checkTable->execute();
         $tableExists = $checkTable->get_result()->num_rows > 0;
-        
+
         if (!$tableExists) {
             return [];
         }
@@ -200,9 +241,10 @@ class KurirModel {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getKurirFromApi() {
+    public function getKurirFromApi()
+    {
         $supportedCouriers = ['jne', 'pos', 'tiki', 'rpx', 'esl', 'pcp', 'jet', 'dse', 'first', 'ncs', 'star'];
-        
+
         $couriers = [];
         foreach ($supportedCouriers as $code) {
             $couriers[] = [
@@ -211,14 +253,15 @@ class KurirModel {
                 'status' => 'aktif'
             ];
         }
-        
+
         return $couriers;
     }
 
-    public function importKurirFromApi() {
+    public function importKurirFromApi()
+    {
         $apiCouriers = $this->getKurirFromApi();
         $imported = 0;
-        
+
         foreach ($apiCouriers as $courier) {
             $stmt = $this->db->prepare("
                 INSERT INTO kurir (kode, nama, status) 
@@ -227,23 +270,24 @@ class KurirModel {
                     nama = VALUES(nama),
                     status = VALUES(status)
             ");
-            
+
             $stmt->bind_param(
                 "sss",
                 $courier['kode'],
                 $courier['nama'],
                 $courier['status']
             );
-            
+
             if ($stmt->execute()) {
                 $imported++;
             }
         }
-        
+
         return $imported;
     }
 
-    public function searchKurir($query) {
+    public function searchKurir($query)
+    {
         $searchTerm = "%$query%";
         $stmt = $this->db->prepare("
             SELECT * FROM kurir 
@@ -255,11 +299,12 @@ class KurirModel {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getPoorPerformingKurir($threshold = 70) {
+    public function getPoorPerformingKurir($threshold = 70)
+    {
         $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
         $checkTable->execute();
         $tableExists = $checkTable->get_result()->num_rows > 0;
-        
+
         if (!$tableExists) {
             return [];
         }
@@ -291,11 +336,12 @@ class KurirModel {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getKurirTrends($days = 30) {
+    public function getKurirTrends($days = 30)
+    {
         $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
         $checkTable->execute();
         $tableExists = $checkTable->get_result()->num_rows > 0;
-        
+
         if (!$tableExists) {
             return [];
         }
@@ -317,12 +363,14 @@ class KurirModel {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function validateKurirCode($kode) {
+    public function validateKurirCode($kode)
+    {
         $supportedCouriers = ['jne', 'pos', 'tiki', 'rpx', 'esl', 'pcp', 'jet', 'dse', 'first', 'ncs', 'star'];
         return in_array(strtolower($kode), $supportedCouriers);
     }
 
-    public function checkKurirExists($kode, $excludeId = null) {
+    public function checkKurirExists($kode, $excludeId = null)
+    {
         if ($excludeId) {
             $stmt = $this->db->prepare("SELECT id FROM kurir WHERE kode = ? AND id != ?");
             $stmt->bind_param("si", $kode, $excludeId);
@@ -334,11 +382,12 @@ class KurirModel {
         return $stmt->get_result()->num_rows > 0;
     }
 
-    public function getKurirUsageStats() {
+    public function getKurirUsageStats()
+    {
         $checkTable = $this->db->prepare("SHOW TABLES LIKE 'pesanan'");
         $checkTable->execute();
         $tableExists = $checkTable->get_result()->num_rows > 0;
-        
+
         if (!$tableExists) {
             $stmt = $this->db->prepare("
                 SELECT 
