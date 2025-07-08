@@ -18,7 +18,11 @@ $router->get('/api/users/stats', function() {
     $controller->getUserStats();
 });
 
-$router->get('/api/users/{id}', function($id) {
+$router->get('/api/users/{id}', function() {
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $segments = explode('/', trim($uri, '/'));
+    $id = end($segments);
+    
     $controller = new UserController();
     $controller->getUserById($id);
 });
@@ -28,22 +32,38 @@ $router->post('/api/users', function() {
     $controller->createUser();
 });
 
-$router->put('/api/users/{id}', function($id) {
+$router->put('/api/users/{id}', function() {
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $segments = explode('/', trim($uri, '/'));
+    $id = end($segments);
+    
     $controller = new UserController();
     $controller->updateUser($id);
 });
 
-$router->delete('/api/users/{id}', function($id) {
+$router->delete('/api/users/{id}', function() {
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $segments = explode('/', trim($uri, '/'));
+    $id = end($segments);
+    
     $controller = new UserController();
     $controller->deleteUser($id);
 });
 
-$router->patch('/api/users/{id}/status', function($id) {
+$router->patch('/api/users/{id}/status', function() {
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $segments = explode('/', trim($uri, '/'));
+    $id = $segments[count($segments) - 2];
+    
     $controller = new UserController();
     $controller->updateUserStatus($id);
 });
 
-$router->patch('/api/users/{id}/password', function($id) {
+$router->patch('/api/users/{id}/password', function() {
+    $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $segments = explode('/', trim($uri, '/'));
+    $id = $segments[count($segments) - 2];
+    
     $controller = new UserController();
     $controller->resetPassword($id);
 });

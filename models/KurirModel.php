@@ -36,8 +36,8 @@ class KurirModel {
 
     public function createKurir($data) {
         $stmt = $this->db->prepare("
-            INSERT INTO kurir (kode, nama, status, created_at, updated_at) 
-            VALUES (?, ?, ?, NOW(), NOW())
+            INSERT INTO kurir (kode, nama, status) 
+            VALUES (?, ?, ?)
         ");
         
         $status = $data['status'] ?? 'aktif';
@@ -82,7 +82,6 @@ class KurirModel {
             return false;
         }
 
-        $fields[] = "updated_at = NOW()";
         $types .= "i";
         $values[] = $id;
 
@@ -100,7 +99,7 @@ class KurirModel {
     }
 
     public function updateKurirStatus($id, $status) {
-        $stmt = $this->db->prepare("UPDATE kurir SET status = ?, updated_at = NOW() WHERE id = ?");
+        $stmt = $this->db->prepare("UPDATE kurir SET status = ? WHERE id = ?");
         $stmt->bind_param("si", $status, $id);
         return $stmt->execute();
     }
@@ -222,12 +221,11 @@ class KurirModel {
         
         foreach ($apiCouriers as $courier) {
             $stmt = $this->db->prepare("
-                INSERT INTO kurir (kode, nama, status, created_at, updated_at) 
-                VALUES (?, ?, ?, NOW(), NOW()) 
+                INSERT INTO kurir (kode, nama, status) 
+                VALUES (?, ?, ?) 
                 ON DUPLICATE KEY UPDATE 
                     nama = VALUES(nama),
-                    status = VALUES(status),
-                    updated_at = NOW()
+                    status = VALUES(status)
             ");
             
             $stmt->bind_param(

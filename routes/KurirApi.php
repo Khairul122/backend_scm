@@ -5,6 +5,26 @@ require_once __DIR__ . '/../models/KurirModel.php';
 
 $kurirController = new KurirController();
 
+$router->get('/api/kurir', function() use ($kurirController) {
+    $kurirController->getAllKurir();
+});
+
+$router->post('/api/kurir', function() use ($kurirController) {
+    $kurirController->createKurir();
+});
+
+$router->put('/api/kurir', function() use ($kurirController) {
+    $kurirController->updateKurir();
+});
+
+$router->delete('/api/kurir', function() use ($kurirController) {
+    $kurirController->deleteKurir();
+});
+
+$router->patch('/api/kurir', function() use ($kurirController) {
+    $kurirController->updateKurirStatus();
+});
+
 $router->get('/api/kurir/available-codes', function() use ($kurirController) {
     $kurirController->getAvailableKurirCodes();
 });
@@ -45,26 +65,6 @@ $router->get('/api/kurir/trends', function() use ($kurirController) {
     $kurirController->getKurirTrends();
 });
 
-$router->get('/api/kurir', function() use ($kurirController) {
-    $kurirController->getAllKurir();
-});
-
-$router->post('/api/kurir', function() use ($kurirController) {
-    $kurirController->createKurir();
-});
-
-$router->put('/api/kurir', function() use ($kurirController) {
-    $kurirController->updateKurir();
-});
-
-$router->patch('/api/kurir', function() use ($kurirController) {
-    $kurirController->updateKurirStatus();
-});
-
-$router->delete('/api/kurir', function() use ($kurirController) {
-    $kurirController->deleteKurir();
-});
-
 $router->post('/api/kurir/import', function() use ($kurirController) {
     $kurirController->importKurirFromApi();
 });
@@ -75,4 +75,20 @@ $router->post('/api/kurir/bulk-update', function() use ($kurirController) {
 
 $router->post('/api/kurir/cleanup', function() use ($kurirController) {
     $kurirController->cleanupPoorPerformers();
+});
+
+$router->post('/api/create-kurir', function() use ($kurirController) {
+    $kurirController->createKurir();
+});
+
+$router->put('/api/update-kurir', function() use ($kurirController) {
+    $kurirController->updateKurir();
+});
+
+$router->patch('/api/update-kurir-status', function() use ($kurirController) {
+    $kurirController->updateKurirStatus();
+});
+
+$router->delete('/api/delete-kurir', function() use ($kurirController) {
+    $kurirController->deleteKurir();
 });
