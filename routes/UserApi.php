@@ -53,7 +53,7 @@ $router->delete('/api/users/{id}', function() {
 $router->patch('/api/users/{id}/status', function() {
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $segments = explode('/', trim($uri, '/'));
-    $id = $segments[count($segments) - 2]; // ambil ID yang sebelum 'status'
+    $id = $segments[count($segments) - 2]; 
     
     $controller = new UserController();
     $controller->updateUserStatus($id);
@@ -62,7 +62,7 @@ $router->patch('/api/users/{id}/status', function() {
 $router->patch('/api/users/{id}/password', function() {
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $segments = explode('/', trim($uri, '/'));
-    $id = $segments[count($segments) - 2]; // ambil ID yang sebelum 'password'
+    $id = $segments[count($segments) - 2]; 
     
     $controller = new UserController();
     $controller->resetPassword($id);

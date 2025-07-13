@@ -58,7 +58,7 @@ class AlamatPengirimanModel {
         ");
         
         $stmt->bind_param(
-            "isssiiisi",
+            "isssiissi",
             $data['user_id'],
             $data['label'],
             $data['nama_penerima'],
